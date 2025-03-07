@@ -1,0 +1,39 @@
+GET http://127.0.0.1:8000/api/users/
+Content-Type: application/json
+Cookie: id=kI9ms8FooVadWeHOj64T%2F7MM7XLW%2FXq0FFNdgQ+8NYl955qEnL0bsSh59iZnGxqiMCiJvSw0p9rdQrFRa0p7aB0%3D
+###
+
+POST http://127.0.0.1:8000/api/users/123
+Content-Type: application/json
+x-guarded: secret
+
+{
+    "name": "John",
+    "age": 30
+}
+
+###
+
+GET http://127.0.0.1:8000/api/users/123
+Content-Type: application/json
+Cookie: id=kI9ms8FooVadWeHOj64T%2F7MM7XLW%2FXq0FFNdgQ+8NYl955qEnL0bsSh59iZnGxqiMCiJvSw0p9rdQrFRa0p7aB0%3D
+
+###
+
+POST http://127.0.0.1:8000/api/auth/login
+Content-Type: application/json
+
+{
+    "name": "John",
+    "age": 30
+}
+
+###
+
+POST http://127.0.0.1:8000/api/auth/logout
+Content-Type: application/json
+
+{
+    "name": "John",
+    "age": 30
+}
