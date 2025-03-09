@@ -1,9 +1,48 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, FormEvent } from "react";
+
+const HOST = 'http://localhost:8000'
+
+function Table({ data }) {
+  return (
+    // <div className="flex justify-center items-center min-h-screen bg-gray-100">
+      <div className="bg-white shadow-md rounded-lg overflow-hidden w-full max-w-4xl">
+        <table className="min-w-full">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Дата
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Текст
+              </th>
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y divide-gray-200">
+            {data.map((item, index) => (
+              <tr key={index}>
+                <td className="px-6 py-4 whitespace-nowrap text-left text-sm text-gray-900">
+                  {item.created_at}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-left text-sm text-gray-500">
+                  {item.content}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    // </div>
+  );
+}
+
 
 export default function VoiceRecorder() {
   const [isRecording, setIsRecording] = useState(false);
+  const [name, setName] = useState("");
+  const [userId, setUserId] = useState("");
+  const [texts, setTexts] = useState([]);
   const [isConnected, setIsConnected] = useState(false);
   const [message, setMessage] = useState("");
   const mediaRecorder = useRef<MediaRecorder | null>(null);
@@ -37,6 +76,15 @@ export default function VoiceRecorder() {
       ws.close();
     };
   }, []);
+
+  useEffect(() => {
+    if (userId) {
+      fetch(`${HOST}/api/users/${userId}`)
+        .then((res) => res.json())
+        .then(data => setTexts(data.texts))
+        .catch(console.error);
+    }
+  }, [userId]);
 
   const saveMessage = () => {
     if (wsRef.current) {
@@ -164,23 +212,86 @@ export default function VoiceRecorder() {
     }
   };
 
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+
+    const formData = new FormData(e.currentTarget);
+    const name = formData.get("name");
+
+    try {
+      const response = await fetch(`${HOST}/api/users/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ username: name }),
+      });
+
+      const user = await response.json();
+
+      if (user) {
+        setUserId(user.user_id)
+        setName(name as string);
+      }
+    } catch (error) {
+      console.log(error)
+    }
+  };
+
   const stopRecording = () => {
     mediaRecorder.current?.stop();
     setIsRecording(false);
   };
 
+  if (!name) {
+    return (
+      <div className="p-4 text-center">
+        <h1 className="text-xl font-bold">Распознавание голоса в Next.js 🎤</h1>
+        <form
+          onSubmit={handleSubmit}
+          className="max-w-md mx-auto mt-10 p-6 bg-white shadow-md rounded-lg"
+        >
+          <div className="mb-4">
+            <label
+              htmlFor="name"
+              className="block text-gray-700 text-sm font-bold mb-2"
+            >
+              Введите ваше имя:
+            </label>
+            <input
+              type="text"
+              id="name"
+              name="name"
+              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+              placeholder="Ваше имя"
+              required
+            />
+          </div>
+          <button
+            type="submit"
+            className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+          >
+            Отправить
+          </button>
+        </form>
+      </div>
+    );
+  }
+
   return (
     <div className="p-4 text-center">
-      <h1 className="text-xl font-bold">🎤 Распознавание голоса в Next.js</h1>
+      <h1 className="text-xl font-bold">{`Добро пожаловать, ${name}! 🎤`}</h1>
       <button
         disabled={!isConnected}
-        className={`mt-4 px-6 py-2 text-white rounded disabled:bg-gray-400 disabled:cursor-not-allowed ${
+        className={`my-4 px-6 py-2 text-white rounded disabled:bg-gray-400 disabled:cursor-not-allowed ${
           isRecording ? "bg-red-500" : "bg-green-500"
         }`}
         onClick={isRecording ? stopRecording : startRecording}
       >
         {isRecording ? "⏹ Остановить" : "🎙 Начать запись"}
       </button>
+
+      <Table data={texts} />
 
       <div className="flex items-center gap-4 p-3 mt-3 shadow bg-white">
         <span className="text-gray-700 font-medium">Ваш запрос:</span>
@@ -191,7 +302,10 @@ export default function VoiceRecorder() {
               {!isRecording && (
                 <>
                   <div className="flex">
-                    <button onClick={saveMessage} className="flex items-center gap-1 p-2 text-white rounded-lg">
+                    <button
+                      onClick={saveMessage}
+                      className="flex items-center gap-1 p-2 text-white rounded-lg"
+                    >
                       ✅
                     </button>
                     <button
